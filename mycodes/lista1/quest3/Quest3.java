@@ -1,4 +1,3 @@
-package com.company.quest3;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -42,6 +41,7 @@ public class Quest3
                 }
             }
             myReader1.close();
+            myReader2.close();
 
         }
         catch (IOException ex) {

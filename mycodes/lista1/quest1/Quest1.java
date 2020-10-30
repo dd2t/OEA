@@ -1,10 +1,12 @@
-package com.company.quest1;
 import java.io.*;
 public class Quest1
 {
     /*
     Recebe um arquivo de texto e imprime na tela
     o número de linhas e palavras do arquivo.
+
+    Obs: Não vou considerar na contagem a última linha
+    se ela estiver vazia.
     */
     public static void main (String args[])
     {
@@ -37,7 +39,7 @@ public class Quest1
             qtd = entrada.read(buffer);
             while (qtd > 0)
             {
-                byte aux = buffer[0];
+                byte aux = 0;
                 for (byte i : buffer)
                 {
                     /*
@@ -47,11 +49,8 @@ public class Quest1
                          -1 - eof
                     */
 
-                    // Se tiver "\n" soma linha.
-                    if (i == 10)
-                    {
-                        linhas++;
-                    }
+                    // if (i == aux) aux = 0;
+
 
                     // Detectando palavras
                     if (i == 32 && (aux != 32 && aux != 10))
@@ -61,10 +60,20 @@ public class Quest1
                     else if (i == 10 && (aux != 32 && aux != 10))
                     {
                         palavras++;
+                        linhas++;
+                    }
+                    else if (i == 10)
+                    {
+                        linhas++;
+                    }
+                    else if (i == 0 && (aux != 32 && aux != 10 && aux != 0)) {
+                        palavras++;
+                        linhas++;
                     }
 
                     aux = i;
                 }
+                if (linhas == 0 && palavras > 0) linhas++;
                 qtd = entrada.read(buffer);
             }
 
@@ -73,6 +82,7 @@ public class Quest1
         catch (IOException ex)
         {
             System.err.println("Erro: Não foi possível ler o "+ args[0] +" corretamente.");
+            System.exit(1);
         }
 
         long tempoFinal = System.currentTimeMillis();

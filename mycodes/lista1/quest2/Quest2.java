@@ -1,13 +1,6 @@
-package com.company.quest2;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
 
 public class Quest2 {
     static class Candidato {
@@ -21,61 +14,93 @@ public class Quest2 {
     }
 
     public static void main (String[] args) {
-        File entrada = new File("/home/dd2t/IdeaProjects/lista-1-oea/src/com/company/quest2/lista-candidatos.dat");
-        File saida = new File("/home/dd2t/IdeaProjects/lista-1-oea/src/com/company/quest2/candidatos-validos.dat");
-        List<Candidato> validos = new ArrayList<>();
+        InputStream entrada = null;
+        File saida = null;
+        byte buffer[] = new byte[92];
+        int qtd;
 
+        // Chamada do comando
+        if (args.length != 2) {
+            if (args.length != 2) {
+                System.err.println("Erro: Chamada incorreta do comando.");
+                // Nas versões mais recentes do java deixar o trabalho de compilar para ele.
+                System.err.println("Uso correto: java Quest22.java [ARQUIVO ALVO] [ARQUIVO DESTINO].");
+                System.exit(1);
+            }
+        }
+
+        // Abrindo o arquivo alvo e destino
         try {
-            Scanner myReader = new Scanner(entrada);
-            List<Candidato> temp = new ArrayList<>();
-            String line = myReader.nextLine();
-            Candidato c1 = makeCandidato(line);
-
-            do {
-                line = myReader.nextLine();
-                Candidato c2 = makeCandidato(line);
-
-                if (!c1.cpf.equals(c2.cpf)) {
-                    // Adiciona c1 aos válidos
-                    validos.add(c1);
-                    c1 = c2;
-                }
-                else {
-                    do {
-                        temp.add(c2);
-                        if (!myReader.hasNextLine()) break;
-                        line = myReader.nextLine();
-                        c2 = makeCandidato(line);
-                    } while (c1.cpf.equals(c2.cpf));
-
-                    // Nesse ponto é garantido que a seq de
-                    // cpfs iguais está em temp e c1 != c2
-                    temp.add(c1);
-
-                    Candidato inscricaoValida = inscricaoComMaiorId(temp);
-                    // Go registro válido
-                    validos.add(inscricaoValida);
-
-                    temp.clear();
-
-                    // Se não houver mais linhas e o ult é diff
-                    if (!myReader.hasNextLine() && !c1.cpf.equals(c2.cpf)) {
-                        validos.add(c2);
-                    }
-                    c1 = c2;
-                }
-            } while (myReader.hasNextLine());
-
+            entrada = new FileInputStream(args[0]);
         }
         catch (IOException ex) {
+            System.err.println("Erro: Não foi possível abrir o "+ args[0] +" corretamente.");
+            System.exit(1);
+        }
+        try {
+            saida = new File(args[1]);
+        }
+        catch (Exception ex) {
+            System.err.println("Erro: Não foi possível abrir o "+ args[1] +" corretamente.");
             ex.printStackTrace();
             System.exit(1);
         }
 
-        writeCandidato(validos, saida);
+        try {
+            qtd = entrada.read(buffer);
+            String aux;
+
+            // Checar se o arquivo está vazio
+            if (qtd < 1) {
+                System.out.println("Alerta: Arquivo alvo vazio");
+                System.exit(0);
+            }
+
+            // Cria o primeiro candidato e captura o segundo
+            aux = new String(buffer);
+            Candidato c1 = criaCandidato(aux);
+            Candidato c2;
+
+            do {
+                qtd = entrada.read(buffer);
+
+                if (qtd < 1) {
+                    escreveCandidato(saida, c1);
+                    break;
+                }
+
+                aux = new String(buffer);
+                c2 = criaCandidato(aux);
+
+                if (!c1.cpf.equals(c2.cpf)) {
+                    escreveCandidato(saida, c1);
+                    c1 = c2;
+                }
+                else {
+                    if (c1.id_inscricao > c2.id_inscricao) {
+                        continue;
+                    }
+                    else {
+                        c1 = c2;
+                    }
+                }
+            } while (qtd > 0);
+        }
+        catch (IOException ex) {
+            System.err.println("Erro: Não foi possível ler o "+ args[0] +" corretamente.");
+            System.exit(1);
+        }
+
+        try {
+            entrada.close();
+        }
+        catch (IOException ex) {
+            System.err.println("Erro: Não foi possível fechar o arquivo alvo corretamente.");
+            System.exit(1);
+        }
     }
 
-    public static Candidato makeCandidato (String a) {
+    public static Candidato criaCandidato(String a) {
         String[] arr = new String[7];
 
         arr[0] = a.substring(0,4);
@@ -99,37 +124,26 @@ public class Quest2 {
         return c;
     }
 
-    public static Candidato inscricaoComMaiorId (List<Candidato> list) {
-        int maiorId = -1;
-        Candidato c = null;
-        for (Candidato i : list) {
-            if (i.id_inscricao > maiorId) {
-                c = i;
-                maiorId = i.id_inscricao;
-            }
-        }
-        return c;
-    }
-
-    public static void writeCandidato (List<Candidato> list, File f){
+    public static void escreveCandidato (File f, Candidato c){
         try {
             RandomAccessFile raf = new RandomAccessFile(f, "rw");
             Charset enc = StandardCharsets.UTF_8;
+            raf.seek(raf.length());
 
-            for (Candidato c : list) {
-                raf.write(String.format("%04d", c.id_inscricao).getBytes(enc));
-                raf.write(c.curso.getBytes(enc));
-                raf.write(c.cpf.getBytes(enc));
-                raf.write(c.dataNascimento.getBytes(enc));
+            raf.write(String.format("%04d", c.id_inscricao).getBytes(enc));
+            raf.write(c.curso.getBytes(enc));
+            raf.write(c.cpf.getBytes(enc));
+            raf.write(c.dataNascimento.getBytes(enc));
+            raf.write(c.sexo.getBytes(enc));
+            raf.write(c.email.getBytes(enc));
+            raf.write(c.opcaoQuadro.getBytes(enc));
 
-                raf.write(c.sexo.getBytes(enc));
-                raf.write(c.email.getBytes(enc));
-                raf.write(c.opcaoQuadro.getBytes(enc));
-                raf.write("\n".getBytes(enc));
-            }
+            raf.close();
         }
         catch (IOException e) {
+            System.err.println("Erro: Não possível escrever no arquivo destino com exito.");
             e.printStackTrace();
+            System.exit(1);
         }
     }
 }
